@@ -40,7 +40,7 @@ Executed on physical hardware: **NVIDIA GeForce RTX 5060** (8GB GDDR7, SM 12.0) 
 
 | Metric | Measured Value | Standard Contiguous Baseline | Gain / Advantage |
 | :--- | :--- | :--- | :--- |
-| **VRAM Memory Usage (64 Sequences)** | **519.88 MB** | 1024.00 MB | **49.23% VRAM Waste Saved (>50%)** |
+| **VRAM Memory Usage (64 Sequences)** | **519.88 MB** | 1024.00 MB | **49.23% VRAM Waste Saved (~50% savings)** |
 | **LRU Prefix Cache Hit Rate** | **100.00 %** | 0.00 % (No sharing) | **Zero-Copy Prompt Sharing** |
 | **Time-To-First-Token (TTFT / Prefill)** | **7.99 ms** | ~24.50 ms | **3.06x Prefill Acceleration** |
 | **Time-Per-Output-Token (TPOT / Decode)**| **7.24 ms/step** | ~18.20 ms/step | **2.51x Decode Acceleration** |
