@@ -1,0 +1,60 @@
+# ==============================================================================
+# PAGED-KV-CACHE ENGINE - GITIGNORE
+# Author: João Felipe de Souza (github.com/JohnScheuer)
+# ==============================================================================
+
+# Build & Compilation Artifacts
+build/
+build_win/
+bin/
+lib/
+out/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Object Files & Compiled Binaries
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.lib
+*.a
+*.exp
+*.pdb
+*.idb
+*.elf
+*.exe
+*.out
+
+# Visual Studio & Windows Artifacts
+.vs/
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+x64/
+x86/
+Debug/
+Release/
+*.dir/
+
+# IDE / Editor Settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System & OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Explicitly keep essential directories
+!assets/
+!include/
+!src/
+!scripts/
