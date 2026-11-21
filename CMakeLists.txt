@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
+find_package(CUDAToolkit REQUIRED)
+
 # Optimization Flags
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -mavx2 -mfma -Wall -Wextra -pthread")
 
@@ -16,11 +18,18 @@ endif()
 
 set(CMAKE_CUDA_FLAGS_RELEASE "-O3 --use_fast_math -lineinfo -Xcompiler=-O3,-mavx2,-mfma")
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-
 # CUDA PagedAttention Kernel & Core Library
 add_library(paged_attention_kernel STATIC
   src/paged_attention.cu
+)
+
+target_include_directories(paged_attention_kernel PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CUDAToolkit_INCLUDE_DIRS}
+)
+
+target_link_libraries(paged_attention_kernel PUBLIC
+  CUDA::cudart
 )
 
 set_target_properties(paged_attention_kernel PROPERTIES
@@ -32,11 +41,10 @@ set_target_properties(paged_attention_kernel PROPERTIES
 add_executable(paged_kv_test
   src/paged_kv_test.cpp
 )
-target_link_libraries(paged_kv_test PRIVATE paged_attention_kernel ${CUDA_LIBRARIES})
+target_link_libraries(paged_kv_test PRIVATE paged_attention_kernel)
 
 # Continuous Scheduler & Benchmark Target
 add_executable(paged_kv_benchmark
   src/continuous_scheduler.cpp
 )
-target_link_libraries(paged_kv_benchmark PRIVATE paged_attention_kernel ${CUDA_LIBRARIES})
-
+target_link_libraries(paged_kv_benchmark PRIVATE paged_attention_kernel)

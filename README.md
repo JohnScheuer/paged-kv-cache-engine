@@ -39,20 +39,20 @@ Traditional LLM inference pre-allocates contiguous memory blocks per request bas
 ### Multi-Architecture Empirical Hardware Benchmarks
 
 Validated natively across two distinct GPU tiers:
-1. **Datacenter Tier (Hopper):** **NVIDIA H200 NVL** (`143,771 MiB` HBM3e, `SM 9.0`, `4,094.60 GB/s` measured bandwidth, `701.02 TFLOPS` BF16), Driver `580.105.08`, CUDA `13.0.88`.
+1. **Datacenter Tier (Hopper — Commit `2a91d2f`, `-DCMAKE_CUDA_ARCHITECTURES=90`):** **NVIDIA H200 NVL** (`143,771 MiB` HBM3e, `SM 9.0`, `4,094.60 GB/s` measured bandwidth, `701.02 TFLOPS` BF16), Driver `580.105.08`, CUDA `13.0.88`.
 2. **Edge / Workstation Tier (Blackwell):** **NVIDIA GeForce RTX 5060** (`8 GB` GDDR7, `SM 12.0`) + **AMD Ryzen 5 5600X** (6C/12T, 3.7 GHz), 32GB DDR4-3200 RAM, Ubuntu 22.04 LTS.
 
-| Metric | NVIDIA H200 NVL (`SM 9.0`, CUDA 13.0) | NVIDIA RTX 5060 (`SM 12.0`, CUDA 12.8) | Contiguous Baseline | Key Advantage |
+| Metric | NVIDIA H200 NVL (`SM 90`, CUDA 13.0) | NVIDIA RTX 5060 (`SM 12.0`, CUDA 12.8) | Contiguous Baseline | Key Advantage |
 | :--- | :--- | :--- | :--- | :--- |
 | **Correctness Suite (Allocator + CoW + FP64 Ref)** | **3/3 Pass (`Max Err: 8.30e-4`)** | **3/3 Pass (`< 1e-3`)** | N/A | Bit-accurate vs. CPU FP64 |
 | **VRAM Memory Usage (64 Sequences)** | **519.88 MB** | **519.88 MB** | 1,024.00 MB | **49.23% VRAM Waste Eliminated** |
 | **LRU Prefix Cache Hit Rate** | **100.00 %** | **100.00 %** | 0.00 % | **Zero-Copy CoW Prompt Sharing** |
-| **Time-To-First-Token (TTFT Kernel)** | **2.53 ms** | **7.99 ms** | ~24.50 ms | **Up to 9.68x Prefill Speedup** |
-| **Time-Per-Output-Token (TPOT Mean)** | **2.45 ms/step** | **7.24 ms/step** | ~18.20 ms/step | **Up to 7.43x Decode Speedup** |
-| **Step Latency Tail SLA (P99)** | **2.46 ms** | **8.58 ms** | 28.90 ms | **Sub-millisecond Jitter (`+0.01 ms` vs Mean)** |
-| **Kernel Decoding Throughput** | **26,133.6 tokens/sec** | **8,840.0 tokens/sec** | ~3,100 tokens/sec | **2.96x Hopper Scaling vs. RTX 5060** |
+| **Time-To-First-Token (TTFT Kernel)** | **2.54 ms** | **7.99 ms** | ~24.50 ms | **Up to 9.66x Prefill Speedup** |
+| **Time-Per-Output-Token (TPOT Mean / P50)** | **2.43 ms/step** | **7.24 ms/step** | ~18.20 ms/step | **Up to 7.49x Decode Speedup** |
+| **Step Latency Tail (P90 / P99 / Max)** | **2.44 / 2.44 / 2.46 ms** | **7.91 / 8.58 ms** | 28.90 ms | **0.03 ms Max Jitter on Hopper** |
+| **Kernel Decoding Throughput** | **26,348.5 tokens/sec** | **8,840.0 tokens/sec** | ~3,100 tokens/sec | **2.98x Hopper Scaling vs. RTX 5060** |
 
-> **Methodological Note:** Kernel latency and throughput metrics above measure isolated C++20/CUDA virtual memory paging and fused `PagedAttention` execution over fixed-length sequences (excluding HTTP/network serialization or autoregressive tokenizer sampling). On the H200 NVL (`Ridge Point = 171.21 FLOP/Byte`), decode workloads remain strictly memory-bandwidth bound, explaining the **2.96x kernel throughput scaling** when moving from GDDR7 to 4.09 TB/s HBM3e.
+> **Methodological Note:** Kernel latency and throughput metrics above measure isolated C++20/CUDA virtual memory paging and fused `PagedAttention` execution over fixed-length sequences (excluding HTTP/network serialization or autoregressive tokenizer sampling). On the H200 NVL (`Ridge Point = 171.21 FLOP/Byte`), decode workloads remain strictly memory-bandwidth bound, explaining the **2.98x kernel throughput scaling** when moving from GDDR7 to 4.09 TB/s HBM3e.
 
 ---
 
@@ -68,7 +68,7 @@ Comparison of pre-allocated contiguous VRAM memory vs. dynamically allocated Pag
 ---
 
 ### Step Latency CDF & P99 SLA Guarantee
-Cumulative distribution function (CDF) of decode step latencies highlighting strict P99 latency SLA bounds (8.58 ms on RTX 5060; 2.46 ms on H200 NVL).
+Cumulative distribution function (CDF) of decode step latencies highlighting strict P99 latency SLA bounds (8.58 ms on RTX 5060; 2.44 ms on H200 NVL).
 
 ![PagedAttention Latency CDF](assets/paged_attention_latency_cdf.png)
 
@@ -167,7 +167,7 @@ paged-kv-cache-engine/
 
 ## 6. Deterministic Ultra-Low Latency Implications (Enterprise Serving, HFT & Robotics)
 
-- **High-Throughput Datacenter LLM Serving (Hopper H200)**: Eliminating 49.23% of KV-cache fragmentation doubles effective concurrent batch capacity within HBM3e limits while maintaining a flat **2.46 ms P99** kernel step SLA (`+0.01 ms` jitter over mean TPOT).
+- **High-Throughput Datacenter LLM Serving (Hopper H200)**: Eliminating 49.23% of KV-cache fragmentation doubles effective concurrent batch capacity within HBM3e limits while maintaining a flat **2.44 ms P99** kernel step SLA (`0.03 ms` max jitter over P50).
 - **High-Frequency Trading & Market Intelligence**: Zero-fragmentation virtual memory allocation guarantees deterministic upper-bounded latencies for streaming market sentiment analysis without unpredictable memory allocation stalls.
 - **Autonomous Robotics & Edge Systems**: Efficient KV-cache paging fits long-horizon context windows into constrained onboard VRAM (e.g., 8GB GDDR7), enabling real-time spatial reasoners to operate at continuous high frame rates.
 
@@ -177,7 +177,7 @@ paged-kv-cache-engine/
 
 ### Prerequisites
 - Linux (Ubuntu 22.04 LTS recommended)
-- CUDA Toolkit 12.8 or higher (tested up to CUDA 13.0 on `SM 9.0` Hopper and `SM 12.0` Blackwell)
+- CUDA Toolkit 12.8 or higher (tested up to CUDA 13.0 on `SM 90` Hopper and `SM 12.0` Blackwell)
 - GCC 11.4+ with C++20 support
 - CMake 3.22+
 - Python 3 + `matplotlib`, `numpy` (for plot generation)
@@ -209,7 +209,7 @@ python3 ../scripts/generate_plots.py
 
 ## 8. Acknowledgments & License
 
-- **Hardware Validation Acknowledgments**: Datacenter Hopper (`SM 9.0`) telemetry validated on an enterprise **NVIDIA H200 NVL** cluster in collaboration with **Vinicius Rosa**.
+- **Hardware Validation Acknowledgments**: Datacenter Hopper (`SM 90`) telemetry validated on an enterprise **NVIDIA H200 NVL** cluster in collaboration with **Vinicius Rosa**.
 - **License**: Released under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---

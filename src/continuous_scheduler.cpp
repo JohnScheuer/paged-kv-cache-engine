@@ -4,6 +4,7 @@
 #include "lru_prefix_cache.hpp"
 #include "paged_attention.cuh"
 
+#include <cuda_runtime.h>
 #include <iostream>
 #include <vector>
 #include <random>
@@ -11,13 +12,35 @@
 #include <iomanip>
 #include <fstream>
 #include <algorithm>
+#include <cstdio>
+#include <string>
 
 using namespace paged_kv;
 
 int main() {
+    int device_id = 0;
+    cudaDeviceProp prop{};
+    cudaGetDevice(&device_id);
+    cudaGetDeviceProperties(&prop, device_id);
+
+    double total_vram_gb = static_cast<double>(prop.totalGlobalMem) / (1024.0 * 1024.0 * 1024.0);
+    char hw_header[256];
+    std::snprintf(
+        hw_header,
+        sizeof(hw_header),
+        "%s (%.2f GB VRAM, SM %d.%d)",
+        prop.name,
+        total_vram_gb,
+        prop.major,
+        prop.minor
+    );
+
+    char sm_badge[64];
+    std::snprintf(sm_badge, sizeof(sm_badge), "%s SM %d.%d", prop.name, prop.major, prop.minor);
+
     std::cout << "================================================================================\n";
     std::cout << "  PAGED-KV-CACHE ENGINE: ADVANCED DEEP BENCHMARK (TTFT vs TPOT & LRU)\n";
-    std::cout << "  Hardware: NVIDIA GeForce RTX 5060 (8GB GDDR7, SM 12.0) | AMD Ryzen 5 5600X\n";
+    std::cout << "  Hardware: " << hw_header << "\n";
     std::cout << "================================================================================\n\n";
 
     constexpr uint32_t NUM_SEQS = 64;
@@ -153,7 +176,7 @@ int main() {
     double throughput_tokens_sec = (total_tokens_processed / (total_time_ms / 1000.0));
 
     std::cout << "================================================================================\n";
-    std::cout << "  ADVANCED SERVING TELEMETRY: TTFT vs TPOT (RTX 5060 SM 12.0)\n";
+    std::cout << "  ADVANCED SERVING TELEMETRY: TTFT vs TPOT (" << sm_badge << ")\n";
     std::cout << "================================================================================\n";
     std::cout << "  Time-to-First-Token (TTFT) : " << ttft_ms << " ms\n";
     std::cout << "  Time-per-Output-Token (TPOT): " << mean_tpot_ms << " ms/step\n";
