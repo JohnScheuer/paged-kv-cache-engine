@@ -36,7 +36,7 @@ Traditional LLM inference pre-allocates contiguous memory blocks per request bas
 +-----------------------------------------------------------------------------------+
 ```
 
-### Multi-Architecture Empirical Hardware Benchmarks
+### Multi-Architecture Empirical Kernel Benchmarks
 
 Validated natively across two distinct GPU tiers:
 1. **Datacenter Tier (Hopper — Commit `2a91d2f`, `-DCMAKE_CUDA_ARCHITECTURES=90`):** **NVIDIA H200 NVL** (`143,771 MiB` HBM3e, `SM 9.0`, `4,094.60 GB/s` measured bandwidth, `701.02 TFLOPS` BF16), Driver `580.105.08`, CUDA `13.0.88`.
@@ -53,6 +53,20 @@ Validated natively across two distinct GPU tiers:
 | **Kernel Decoding Throughput** | **26,348.5 tokens/sec** | **8,840.0 tokens/sec** | ~3,100 tokens/sec | **2.98x Hopper Scaling vs. RTX 5060** |
 
 > **Methodological Note:** Kernel latency and throughput metrics above measure isolated C++20/CUDA virtual memory paging and fused `PagedAttention` execution over fixed-length sequences (excluding HTTP/network serialization or autoregressive tokenizer sampling). On the H200 NVL (`Ridge Point = 171.21 FLOP/Byte`), decode workloads remain strictly memory-bandwidth bound, explaining the **2.98x kernel throughput scaling** when moving from GDDR7 to 4.09 TB/s HBM3e.
+
+### End-to-End Production Serving Telemetry (`vLLM 0.25.1` FP8 on H200 NVL)
+
+To complement the isolated C++20/CUDA kernel benchmarks, end-to-end serving saturation was validated on the same **NVIDIA H200 NVL (`SM 90`)** using `Qwen/Qwen2.5-7B-Instruct` with `CutlassFP8ScaledMMLinearKernel`, FP8 KV-Cache, Prefix Caching, and Chunked Prefill (`512` prompts, `256` max concurrency, `2048` input / `256` output tokens, `1536`-token shared prefix):
+
+| End-to-End Serving Metric | Measured Value (`H200 NVL FP8`) | Architectural Takeaway |
+| :--- | :--- | :--- |
+| **Available FP8 KV-Cache Capacity** | **4,333,040 tokens** | Supports **132.23x** concurrent 32k-context requests in HBM3e |
+| **Completion Reliability** | **512 / 512 (0 failures)** | Sustained 256-way concurrency in `29.13 s` (`17.57 req/s`) |
+| **Total Throughput (Prefill + Decode)** | **67,486.24 tokens/sec** | `1,835,008` input + `131,072` output tokens processed |
+| **Sustained / Peak Decode Throughput** | **4,499.08 / 14,720 tokens/sec** | Accelerated by `43.1%` prefix cache hit rate & FP8 Tensor Cores |
+| **Decode Latency (TPOT P50 / P99)** | **43.99 ms / 54.68 ms** | Tight tail latency under heavy 256-client saturation |
+
+> *Validation Note:* Uncalibrated FP8 weight/KV casting (`q_scale = k_scale = prob_scale = 1.0`) was used strictly to profile hardware throughput ceilings; production deployments require calibrated FP8 checkpoints (e.g., `llm-compressor`) to guarantee BF16 perplexity parity.
 
 ---
 
@@ -148,17 +162,12 @@ paged-kv-cache-engine/
 │   ├── block_allocator.hpp
 │   ├── lru_prefix_cache.hpp
 │   ├── avx2_prefix_hasher.hpp
-│   ├── paged_attention_kernel.cuh
-│   └── continuous_scheduler.hpp
+│   ├── paged_attention.cuh
+│   └── kv_cache_types.hpp
 ├── src/
-│   ├── block_allocator.cpp
-│   ├── lru_prefix_cache.cpp
-│   ├── avx2_prefix_hasher.cpp
-│   ├── paged_attention_kernel.cu
+│   ├── paged_attention.cu
 │   ├── continuous_scheduler.cpp
-│   └── main_benchmark.cpp
-├── tests/
-│   └── test_paged_kv.cpp
+│   └── paged_kv_test.cpp
 └── scripts/
     └── generate_plots.py
 ```
@@ -209,7 +218,7 @@ python3 ../scripts/generate_plots.py
 
 ## 8. Acknowledgments & License
 
-- **Hardware Validation Acknowledgments**: Datacenter Hopper (`SM 90`) telemetry validated on an enterprise **NVIDIA H200 NVL** cluster in collaboration with **Vinicius Rosa**.
+- **Hardware Validation Acknowledgments**: Datacenter Hopper (`SM 90`) kernel and end-to-end `vLLM` FP8 serving telemetry validated on an enterprise **NVIDIA H200 NVL** cluster in collaboration with **Vinicius Rosa**.
 - **License**: Released under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
