@@ -1,0 +1,94 @@
+B07 A/B PRECISION
+[2026-11-21T23:27:08+00:00] START b07-bf16-bf16 quant=none kv=bfloat16 batched=32768 seqs=256
+[2026-11-21T23:28:08+00:00] READY b07-bf16-bf16 seconds=65 pid=51
+[2026-11-21T23:28:09+00:00] BENCH b07-bf16-bf16-c1 concurrency=1 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-21T23:34:17+00:00] BENCH b07-bf16-bf16-c32 concurrency=32 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-21T23:34:42+00:00] BENCH b07-bf16-bf16-c128 concurrency=128 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-21T23:35:00+00:00] BENCH b07-bf16-bf16-c256 concurrency=256 prompts=512 input=2048 output=256 prefix=1536
+[2026-11-21T23:35:55+00:00] START b07-fp8-bf16 quant=fp8 kv=bfloat16 batched=32768 seqs=256
+[2026-11-21T23:36:40+00:00] READY b07-fp8-bf16 seconds=50 pid=2144
+[2026-11-21T23:36:40+00:00] BENCH b07-fp8-bf16-c1 concurrency=1 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-21T23:41:13+00:00] BENCH b07-fp8-bf16-c32 concurrency=32 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-21T23:41:37+00:00] BENCH b07-fp8-bf16-c128 concurrency=128 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-21T23:41:54+00:00] BENCH b07-fp8-bf16-c256 concurrency=256 prompts=512 input=2048 output=256 prefix=1536
+[2026-11-21T23:42:41+00:00] START b07-bf16-fp8 quant=none kv=fp8 batched=32768 seqs=256
+[2026-11-21T23:43:16+00:00] READY b07-bf16-fp8 seconds=40 pid=4039
+[2026-11-21T23:43:16+00:00] BENCH b07-bf16-fp8-c1 concurrency=1 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-21T23:49:30+00:00] BENCH b07-bf16-fp8-c32 concurrency=32 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-21T23:49:55+00:00] BENCH b07-bf16-fp8-c128 concurrency=128 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-21T23:50:13+00:00] BENCH b07-bf16-fp8-c256 concurrency=256 prompts=512 input=2048 output=256 prefix=1536
+[2026-11-21T23:51:07+00:00] START b07-fp8-fp8 quant=fp8 kv=fp8 batched=32768 seqs=256
+[2026-11-21T23:51:52+00:00] READY b07-fp8-fp8 seconds=50 pid=5776
+[2026-11-21T23:51:52+00:00] BENCH b07-fp8-fp8-c1 concurrency=1 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-21T23:56:30+00:00] BENCH b07-fp8-fp8-c32 concurrency=32 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-21T23:56:54+00:00] BENCH b07-fp8-fp8-c128 concurrency=128 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-21T23:57:11+00:00] BENCH b07-fp8-fp8-c256 concurrency=256 prompts=512 input=2048 output=256 prefix=1536
+B08 CONCURRENCY
+[2026-11-21T23:57:58+00:00] START b08-sweep quant=fp8 kv=fp8 batched=32768 seqs=256
+[2026-11-21T23:58:28+00:00] READY b08-sweep seconds=35 pid=7654
+[2026-11-21T23:58:28+00:00] BENCH b08-c1 concurrency=1 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:03:08+00:00] BENCH b08-c2 concurrency=2 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:05:30+00:00] BENCH b08-c4 concurrency=4 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:06:49+00:00] BENCH b08-c8 concurrency=8 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:07:35+00:00] BENCH b08-c16 concurrency=16 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:08:05+00:00] BENCH b08-c32 concurrency=32 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:08:27+00:00] BENCH b08-c64 concurrency=64 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:08:46+00:00] BENCH b08-c128 concurrency=128 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:09:03+00:00] BENCH b08-c192 concurrency=192 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:09:20+00:00] BENCH b08-c256 concurrency=256 prompts=256 input=2048 output=256 prefix=1536
+B09 PREFIX CACHE
+[2026-11-22T00:09:40+00:00] START b09-prefix quant=fp8 kv=fp8 batched=32768 seqs=256
+[2026-11-22T00:10:10+00:00] READY b09-prefix seconds=35 pid=10932
+[2026-11-22T00:10:39+00:00] START b10-t2048 quant=fp8 kv=fp8 batched=2048 seqs=256
+[2026-11-22T00:11:24+00:00] READY b10-t2048 seconds=50 pid=11929
+[2026-11-22T00:11:24+00:00] BENCH b10-t2048-c32 concurrency=32 prompts=256 input=4096 output=128 prefix=0
+[2026-11-22T00:11:59+00:00] BENCH b10-t2048-c128 concurrency=128 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:12:29+00:00] START b10-t4096 quant=fp8 kv=fp8 batched=4096 seqs=256
+[2026-11-22T00:13:09+00:00] READY b10-t4096 seconds=45 pid=13332
+[2026-11-22T00:13:09+00:00] BENCH b10-t4096-c32 concurrency=32 prompts=256 input=4096 output=128 prefix=0
+[2026-11-22T00:13:44+00:00] BENCH b10-t4096-c128 concurrency=128 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:14:13+00:00] START b10-t8192 quant=fp8 kv=fp8 batched=8192 seqs=256
+[2026-11-22T00:14:58+00:00] READY b10-t8192 seconds=50 pid=14725
+[2026-11-22T00:14:58+00:00] BENCH b10-t8192-c32 concurrency=32 prompts=256 input=4096 output=128 prefix=0
+[2026-11-22T00:15:34+00:00] BENCH b10-t8192-c128 concurrency=128 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:16:03+00:00] START b10-t16384 quant=fp8 kv=fp8 batched=16384 seqs=256
+[2026-11-22T00:16:48+00:00] READY b10-t16384 seconds=50 pid=16134
+[2026-11-22T00:16:48+00:00] BENCH b10-t16384-c32 concurrency=32 prompts=256 input=4096 output=128 prefix=0
+[2026-11-22T00:17:24+00:00] BENCH b10-t16384-c128 concurrency=128 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:17:54+00:00] START b10-t32768 quant=fp8 kv=fp8 batched=32768 seqs=256
+[2026-11-22T00:18:24+00:00] READY b10-t32768 seconds=35 pid=17543
+[2026-11-22T00:18:24+00:00] BENCH b10-t32768-c32 concurrency=32 prompts=256 input=4096 output=128 prefix=0
+[2026-11-22T00:19:02+00:00] BENCH b10-t32768-c128 concurrency=128 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:19:32+00:00] START b10-t65536 quant=fp8 kv=fp8 batched=65536 seqs=256
+[2026-11-22T00:20:17+00:00] READY b10-t65536 seconds=50 pid=18945
+[2026-11-22T00:20:17+00:00] BENCH b10-t65536-c32 concurrency=32 prompts=256 input=4096 output=128 prefix=0
+[2026-11-22T00:20:53+00:00] BENCH b10-t65536-c128 concurrency=128 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:21:23+00:00] START b11-bfloat16 quant=fp8 kv=bfloat16 batched=32768 seqs=256
+[2026-11-22T00:21:53+00:00] READY b11-bfloat16 seconds=35 pid=20368
+[2026-11-22T00:21:53+00:00] BENCH b11-bfloat16-long concurrency=32 prompts=128 input=8192 output=256 prefix=4096
+[2026-11-22T00:22:40+00:00] BENCH b11-bfloat16-xlong concurrency=128 prompts=128 input=16384 output=128 prefix=8192
+[2026-11-22T00:24:13+00:00] START b11-fp8 quant=fp8 kv=fp8 batched=32768 seqs=256
+[2026-11-22T00:24:43+00:00] READY b11-fp8 seconds=35 pid=21773
+[2026-11-22T00:24:43+00:00] BENCH b11-fp8-long concurrency=32 prompts=128 input=8192 output=256 prefix=4096
+[2026-11-22T00:25:30+00:00] BENCH b11-fp8-xlong concurrency=128 prompts=128 input=16384 output=128 prefix=8192
+[2026-11-22T00:27:02+00:00] START b12-s32 quant=fp8 kv=fp8 batched=32768 seqs=32
+[2026-11-22T00:27:47+00:00] READY b12-s32 seconds=50 pid=23178
+[2026-11-22T00:27:47+00:00] BENCH b12-s32 concurrency=256 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:28:24+00:00] START b12-s64 quant=fp8 kv=fp8 batched=32768 seqs=64
+[2026-11-22T00:29:09+00:00] READY b12-s64 seconds=50 pid=24335
+[2026-11-22T00:29:09+00:00] BENCH b12-s64 concurrency=256 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:29:41+00:00] START b12-s128 quant=fp8 kv=fp8 batched=32768 seqs=128
+[2026-11-22T00:30:26+00:00] READY b12-s128 seconds=50 pid=25492
+[2026-11-22T00:30:26+00:00] BENCH b12-s128 concurrency=256 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:30:56+00:00] START b12-s256 quant=fp8 kv=fp8 batched=32768 seqs=256
+[2026-11-22T00:31:26+00:00] READY b12-s256 seconds=35 pid=26649
+[2026-11-22T00:31:26+00:00] BENCH b12-s256 concurrency=256 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:31:55+00:00] START b12-s512 quant=fp8 kv=fp8 batched=32768 seqs=512
+[2026-11-22T00:32:25+00:00] READY b12-s512 seconds=35 pid=27799
+[2026-11-22T00:32:25+00:00] BENCH b12-s512 concurrency=256 prompts=256 input=2048 output=256 prefix=1536
+[2026-11-22T00:32:55+00:00] START b13-bf16 quant=none kv=bfloat16 batched=32768 seqs=128
+[2026-11-22T00:33:30+00:00] READY b13-bf16 seconds=40 pid=28949
+[2026-11-22T00:33:36+00:00] START b13-fp8 quant=fp8 kv=fp8 batched=32768 seqs=128
+[2026-11-22T00:34:06+00:00] READY b13-fp8 seconds=35 pid=29710
+[2026-11-22T00:34:12+00:00] START b14-stability quant=fp8 kv=fp8 batched=32768 seqs=256
+[2026-11-22T00:34:42+00:00] READY b14-stability seconds=35 pid=30609

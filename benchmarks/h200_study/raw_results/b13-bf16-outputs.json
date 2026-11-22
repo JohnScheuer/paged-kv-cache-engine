@@ -1,0 +1,32 @@
+[
+  {
+    "prompt": "Explain in exactly three sentences why LLM decode is often memory-bound.",
+    "status": 200,
+    "latency_ms": 426.9450977444649,
+    "text": " LLM decode is often memory-bound because the process requires storing large portions of the model's weights and intermediate activations in memory to perform computations efficiently. This high memory demand can exceed the capacity or bandwidth limitations of available hardware, leading to performance bottlenecks. As a result, optimizing memory usage and leveraging efficient data structures and parallel processing techniques are crucial for improving the scalability and speed of LLM decoding."
+  },
+  {
+    "prompt": "List four mechanisms used by vLLM to improve serving throughput.",
+    "status": 200,
+    "latency_ms": 495.24768255651,
+    "text": " vLLM (very large language model) is a high-performance inference engine designed for serving large language models efficiently. Here are four key mechanisms used by vLLM to improve serving throughput:\n\n1. **Parallelization of Inference**: vLLM leverages parallel processing to distribute the workload across multiple CPU cores or GPUs, allowing it to process multiple tokens or sequences simultaneously. This significantly reduces the latency and increases the throughput.\n\n2. **Efficient Tokenization**: vLLM"
+  },
+  {
+    "prompt": "What is the difference between prefill and decode?",
+    "status": 200,
+    "latency_ms": 493.40054020285606,
+    "text": " Prefill and decode are two different concepts that are often used in the context of data processing, particularly in web development and form handling.\n\n1. Prefill: Prefill refers to the process of automatically populating a form with previously entered or default values. This can be done for various reasons, such as:\n\n   - Completing forms faster by pre-populating fields with known information.\n   - Resubmitting forms after a failed submission without having to re-enter all the data"
+  },
+  {
+    "prompt": "Explain why prefix caching reduces repeated prompt work.",
+    "status": 200,
+    "latency_ms": 493.9944539219141,
+    "text": " Prefix caching is a technique used in natural language processing (NLP) and machine learning models, particularly in autocompletion systems and chatbots, to improve efficiency and reduce computational overhead. The primary goal of prefix caching is to store and reuse previously generated responses for common or frequently occurring prefixes of user inputs. This approach significantly reduces the need for the model to generate the same response multiple times, thereby improving performance and reducing latency.\n\nHere's how prefix caching works and why it reduces repeated"
+  },
+  {
+    "prompt": "Describe one risk of using uncalibrated FP8 scales.",
+    "status": 200,
+    "latency_ms": 493.36058646440506,
+    "text": " One risk of using uncalibrated FP8 (bfloat16) scales in machine learning models is that the numerical precision and accuracy of the computations may be compromised, leading to suboptimal model performance or even incorrect results.\n\nFP8 is a half-precision floating-point format designed for efficient inference on hardware that supports bfloat16. However, if the scaling factors used to convert between different data types (e.g., from FP32 to FP8) are not"
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "prompt": "Explain in exactly three sentences why LLM decode is often memory-bound.",
+    "status": 200,
+    "latency_ms": 384.0392604470253,
+    "text": " LLM decoding, particularly for large models sizes and long sequences, is inherently memory-bound because it requires storing the entire sequence of tokens or hidden states in memory-memory to generate predictions sequentially. This necessitates substantial computational resources, and as efficient memory management managementments to prevent out-of-memory errors, thus limiting practical model-memory processing capacity..\nLLM decoding's memory-bound nature stems from the need to maintain an active in-memory representation-tance-t state of the entire token sequence-t"
+  },
+  {
+    "prompt": "List four mechanisms used by vLLM to improve serving throughput.",
+    "status": 200,
+    "latency_ms": 52.00628191232681,
+    "text": ".\nv\n\nv\n\n\n\n\n\n1\n\n"
+  },
+  {
+    "prompt": "What is the difference between prefill and decode?",
+    "status": 200,
+    "latency_ms": 373.0923440307379,
+    "text": " I have a file thatfill and decode.fill and decode.\n.fill and decode\nfill and decode pre.fill and decode pre.fill and decode fill and decode pre.fill and decode pre.fill and decode fill and decode pre.fill and decode pre.fill and decode fill and decode pre.fill and decode pre.fill and decode fill and decode pre.fill and decode pre.fill and decode fill and decode pre.fill and decode pre.fill and decode fill and decode pre.fill and decode pre.fill and decode fill and"
+  },
+  {
+    "prompt": "Explain why prefix caching reduces repeated prompt work.",
+    "status": 200,
+    "latency_ms": 373.0416651815176,
+    "text": " Prefix caching is a technique used in natural language processing (NLP) and machine in artificial intelligence (AI) to improve the efficiency of generating responsesferences or by storing and re the results of of previous inferences. made. It. it. In........\n\n In. inquiries..\n\n These stored results results results results results are then can are inquiries are called referred the form of of prefixes, which are are are and and are be used used to be"
+  },
+  {
+    "prompt": "Describe one risk of using uncalibrated FP8 scales.",
+    "status": 200,
+    "latency_ms": 372.68585711717606,
+    "text": " Uncalibrated FP8 (Fixed Point 8-bit) scales can pose several risks in digital signal processing processing and machine systems where processing applications. One significant risk is **quantizationization error quantizationizationation error quantization erroration noise**.\n\n### Quantizationizationation noise** arises when the dynamic range of the input signal exceeds the limited range that of the fixed-point representation format. representation type representation. representation type. fixed point fixed fixed fixed fixed fixed fixed fixed fixed fixed"
+  }
+]
