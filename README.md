@@ -259,7 +259,7 @@ python3 ../scripts/generate_h200_study_plots.py
 
 ## 8. Acknowledgments & License
 
-- **Hardware Validation Acknowledgments**: Datacenter Hopper (`SM 90`) kernel and end-to-end `vLLM` FP8 characterization telemetry (`B07–B14`) validated on an enterprise **NVIDIA H200 NVL** cluster in collaboration with **Vinicius Rosa**.
+- **Hardware Validation Acknowledgments**: Datacenter Hopper (`SM 90`) kernel and end-to-end `vLLM` FP8 characterization telemetry (`B07–B14`) validated on an enterprise **NVIDIA H200 NVL** cluster in collaboration with [**Vinicius Rosa**](https://github.com/rosavini).
 - **License**: Released under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
