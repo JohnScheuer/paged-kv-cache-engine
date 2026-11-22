@@ -1,0 +1,98 @@
+RESULTADO CONSOLIDADO — B07 A B14
+
+Data: 22/11/2026
+GPU: NVIDIA H200 NVL
+Modelo: Qwen/Qwen2.5-7B-Instruct
+Runtime: vLLM 0.25.1
+
+RESUMO EXECUTIVO
+
+As baterias separaram o efeito dos pesos FP8, KV cache FP8, concorrência,
+prefix caching, chunked prefill e max-num-seqs.
+
+A melhor combinação de throughput foi FP8 nos pesos + FP8 no KV cache. Em
+concorrência 32, atingiu 5.267,88 tokens/s de saída, contra 4.544,88 tokens/s
+em BF16/BF16: ganho de 15,9%. Em concorrência 128, atingiu 10.436,95 tokens/s,
+contra 9.201,76 tokens/s: ganho de 13,4%.
+
+O maior ganho veio dos pesos FP8. O KV FP8 aumentou pouco o throughput nesta
+carga, mas é importante para ampliar a capacidade de contexto e de sessões.
+
+PRINCIPAIS RESULTADOS
+
+1. Concorrência
+
+- 1: 243,62 tokens/s; TTFT mediano 49,92 ms.
+- 16: 3.423,20 tokens/s; TTFT mediano 29,21 ms.
+- 64: 8.418,35 tokens/s; TTFT mediano 42,87 ms.
+- 128: 10.382,34 tokens/s; TTFT mediano 122,45 ms.
+- 256: 11.449,47 tokens/s; TTFT mediano 1.013,83 ms.
+
+A vazão aumenta até 256, mas a latência cresce muito. Para baixa latência, a
+faixa recomendada inicialmente é concorrência 16-64. Para throughput máximo,
+256 é possível, mas com espera elevada.
+
+2. Prefix caching
+
+- Prefixo idêntico: latência média 234,56 ms.
+- Oito grupos de prefixos: 206,58 ms.
+- Prefixos únicos: 1.664,39 ms.
+
+Prefixos únicos foram aproximadamente 7,1 vezes mais lentos que o caso de
+prefixos compartilhados. O teste não coletou o contador interno de hits; o
+número é uma comparação de latência, não um hit rate oficial.
+
+3. Chunked prefill
+
+Com concorrência 32, aumentar max-num-batched-tokens de 2.048 para 65.536
+subiu a saída de 1.403 para 1.863 tokens/s, mas elevou o TTFT mediano de 268
+para 1.844 ms.
+
+Valores maiores favorecem lote e throughput. Valores menores favorecem o
+primeiro token e interação.
+
+4. KV cache em contexto longo
+
+KV BF16 versus KV FP8 apresentou praticamente o mesmo throughput:
+
+- 8.192 tokens de entrada: 967,81 versus 978,97 tokens/s.
+- 16.384 tokens de entrada: 237,67 versus 238,99 tokens/s.
+
+O benefício do KV FP8 nesta carga é capacidade, não velocidade.
+
+5. max-num-seqs
+
+- 32: 3.027,92 tokens/s.
+- 64: 3.899,22 tokens/s.
+- 128: 4.305,10 tokens/s.
+- 256: 4.507,43 tokens/s.
+- 512: 4.497,20 tokens/s.
+
+Acima de 256 não houve ganho. O valor 512 ficou ligeiramente pior.
+
+6. Qualidade FP8
+
+Comparação determinística com cinco prompts:
+
+- Exact match: 0/5.
+- Similaridade textual média: 0,0958.
+- Um dos cinco prompts produziu apenas 15 caracteres em FP8.
+
+O benchmark não permite declarar equivalência de qualidade entre FP8 e BF16.
+O checkpoint usou q_scale, k_scale e prob_scale em 1.0, sem calibração da
+atenção FP8.
+
+7. Estabilidade
+
+A bateria de 30 minutos terminou pelo timeout planejado de 1.800 segundos
+(código 124). O servidor permaneceu funcional até o encerramento e não foram
+observadas falhas HTTP nos pontos coletados.
+
+RECOMENDAÇÃO
+
+- Throughput: FP8/FP8, max-num-seqs=256 e concorrência elevada.
+- Interação: concorrência 16-64 e max-num-batched-tokens menor.
+- Workloads repetitivos: manter prefix caching.
+- Produção: não promover FP8 sem escalas calibradas e validação de qualidade.
+
+Arquivos brutos disponíveis na pasta `resultados/work-results/`.
