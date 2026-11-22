@@ -68,11 +68,37 @@ To complement the isolated C++20/CUDA kernel benchmarks, end-to-end serving satu
 
 > *Validation Note:* Uncalibrated FP8 weight/KV casting (`q_scale = k_scale = prob_scale = 1.0`) was used strictly to profile hardware throughput ceilings; production deployments require calibrated FP8 checkpoints (e.g., `llm-compressor`) to guarantee BF16 perplexity parity.
 
+### Systematic H200 NVL Characterization & Ablation Study (`B07–B14`)
+
+To isolate the exact architectural bottlenecks of LLM serving on **NVIDIA H200 NVL (`SM 90`, 4,095 GB/s HBM3e, 701 TFLOPS BF16, Ridge Point = 171 FLOP/Byte)**, an automated 8-battery characterization suite (`benchmarks/h200_study/`) was executed using `Qwen/Qwen2.5-7B-Instruct` on `vLLM 0.25.1`:
+
+1. **Precision Ablation (`B07` — Weights vs. KV-Cache Quantization):**
+   - **BF16/BF16:** `4,544.88 tok/s` (`c=32`) | `9,201.76 tok/s` (`c=128`)
+   - **BF16/FP8 (KV only):** `4,580.98 tok/s` (`c=32`) | `9,780.49 tok/s` (`c=128`)
+   - **FP8/BF16 (Weights only):** `5,159.55 tok/s` (`c=32`) | `10,190.54 tok/s` (`c=128`)
+   - **FP8/FP8 (Full FP8):** **`5,267.88 tok/s`** (`+15.9%` at `c=32`) | **`10,436.95 tok/s`** (`+13.4%` at `c=128`)
+   - *Takeaway:* Weight byte reduction drives decode throughput; FP8 KV-Cache primarily doubles maximum concurrent context capacity (`8k–16k+` tokens, `B11`) with neutral raw speed delta (`+0.56%` to `+1.15%`).
+
+2. **Concurrency Pareto Frontier (`B08` — `c=1` to `c=256`):**
+   - **Interactive Sweet Spot (`c=16` to `c=64`):** Scales from `3,423.20 tok/s` (`TTFT P50 = 29.21 ms`) up to **`8,418.35 tok/s`** while keeping **`TTFT P50 = 42.87 ms`** and `TPOT P50 = 7.15 ms`.
+   - **Max Batch Saturation (`c=256`, `max-num-seqs=256` in `B12`):** Reaches **`11,449.47 tok/s`** output throughput at the expense of queueing latency (`TTFT P50 = 1,013.83 ms`). Increasing `max-num-seqs` to `512` slightly regressed throughput (`4,507.43 → 4,497.20 tok/s`).
+
+3. **Prefix Caching & Chunked Prefill (`B09` & `B10`):**
+   - **Prefix Caching (`B09`):** Shared prefixes reduced mean request latency by **7.1x** (`206.58–234.56 ms` vs. `1,664.39 ms` for unique prefixes).
+   - **Chunked Prefill (`B10`):** Sweeping `max-num-batched-tokens` from `2,048` to `65,536` (`c=32`) boosted batch output from `1,403` to `1,863 tok/s`, while increasing median TTFT from `268 ms` to `1,844 ms` — confirming it as a primary SLO tuning lever.
+
+4. **30-Minute Soak Stability & Calibration Gate (`B13` & `B14`):**
+   - Sustained a 30-minute continuous load test (`1,800s` planned window) with **zero HTTP failures**, while deterministic parity checks (`B13`) confirmed that uncalibrated FP8 scales (`scale = 1.0`) diverge from BF16 (`0/5` exact match), requiring calibrated checkpoints prior to production rollout.
+
+![H200 Concurrency Pareto Curve](assets/h200_concurrency_pareto.png)
+![H200 FP8 Precision Ablation](assets/h200_fp8_precision_ablation.png)
+![H200 Prefix Caching and Chunked Prefill](assets/h200_prefix_and_chunked_prefill.png)
+
 ---
 
-## 2. Performance Visualizations & Telemetry
+## 2. Kernel Performance Visualizations & Telemetry
 
-All plots are generated directly from empirical C++ benchmark execution CSV outputs (`benchmark_summary.csv` and `step_latencies.csv`).
+All kernel plots are generated directly from empirical C++ benchmark execution CSV outputs (`benchmark_summary.csv` and `step_latencies.csv`).
 
 ### VRAM Memory Savings vs Sequence Count
 Comparison of pre-allocated contiguous VRAM memory vs. dynamically allocated Paged KV-Cache blocks showing 49.23% memory waste elimination at 64 sequences.
@@ -157,7 +183,20 @@ paged-kv-cache-engine/
 │   ├── vram_fragmentation_comparison.png
 │   ├── paged_attention_latency_cdf.png
 │   ├── cow_prefix_memory_savings.png
-│   └── kernel_throughput_scaling.png
+│   ├── kernel_throughput_scaling.png
+│   ├── h200_concurrency_pareto.png
+│   ├── h200_fp8_precision_ablation.png
+│   └── h200_prefix_and_chunked_prefill.png
+├── benchmarks/
+│   └── h200_study/
+│       ├── docs/
+│       │   ├── ANALISE.md
+│       │   ├── grafico-estudo-h200.html
+│       │   └── resultado-para-envio.txt
+│       └── scripts/
+│           ├── b07-b14-bench.yaml
+│           ├── b07-b14-faseA-download.yaml
+│           └── run-b07-b14.sh
 ├── include/
 │   ├── block_allocator.hpp
 │   ├── lru_prefix_cache.hpp
@@ -169,7 +208,8 @@ paged-kv-cache-engine/
 │   ├── continuous_scheduler.cpp
 │   └── paged_kv_test.cpp
 └── scripts/
-    └── generate_plots.py
+    ├── generate_plots.py
+    └── generate_h200_study_plots.py
 ```
 
 ---
@@ -210,15 +250,16 @@ make -j$(nproc)
 # Run benchmark & generate CSV telemetry
 ./paged_kv_benchmark
 
-# Regenerate assets
+# Regenerate kernel and H200 characterization assets
 python3 ../scripts/generate_plots.py
+python3 ../scripts/generate_h200_study_plots.py
 ```
 
 ---
 
 ## 8. Acknowledgments & License
 
-- **Hardware Validation Acknowledgments**: Datacenter Hopper (`SM 90`) kernel and end-to-end `vLLM` FP8 serving telemetry validated on an enterprise **NVIDIA H200 NVL** cluster in collaboration with **Vinicius Rosa**.
+- **Hardware Validation Acknowledgments**: Datacenter Hopper (`SM 90`) kernel and end-to-end `vLLM` FP8 characterization telemetry (`B07–B14`) validated on an enterprise **NVIDIA H200 NVL** cluster in collaboration with **Vinicius Rosa**.
 - **License**: Released under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
