@@ -15,26 +15,24 @@ An ultra-low latency, production-grade virtual Key-Value (KV) cache memory manag
 ### Architecture Overview
 Traditional LLM inference pre-allocates contiguous memory blocks per request based on the maximum sequence length (e.g., $N=4096$). This leads to severe **external and internal memory fragmentation** (up to 60–80% VRAM waste). **Paged-KV-Cache Engine** partitions KV-cache tensors into fixed-size physical blocks ($B=16$ tokens) and maps non-contiguous physical blocks through a virtual page table.
 
-```text
-+-----------------------------------------------------------------------------------+
-|                            PAGED KV-CACHE ARCHITECTURE                            |
-+-----------------------------------------------------------------------------------+
-|  Logical Request Sequence                                                         |
-|  [Block 0: Tokens 0-15] -> [Block 1: Tokens 16-31] -> [Block 2: Tokens 32-47]     |
-|             |                            |                            |           |
-|             v                            v                            v           |
-|  Virtual Page Table                                                               |
-|  Logical ID 0 -> Physical Block 102                                               |
-|  Logical ID 1 -> Physical Block 45 (Shared CoW System Prompt)                     |
-|  Logical ID 2 -> Physical Block 819                                               |
-|             |                            |                            |           |
-|             v                            v                            v           |
-|  Physical VRAM Pool (Non-Contiguous Blocks in HBM3e / GDDR7)                      |
-|  [Phys Block 45] (Ref Count: 64) <--- Shared Prefix (AVX2 Hashed)                 |
-|  [Phys Block 102] (Ref Count: 1)                                                  |
-|  [Phys Block 819] (Ref Count: 1)                                                  |
-+-----------------------------------------------------------------------------------+
-```
+    +-----------------------------------------------------------------------------------+
+    |                            PAGED KV-CACHE ARCHITECTURE                            |
+    +-----------------------------------------------------------------------------------+
+    |  Logical Request Sequence                                                         |
+    |  [Block 0: Tokens 0-15] -> [Block 1: Tokens 16-31] -> [Block 2: Tokens 32-47]     |
+    |             |                            |                            |           |
+    |             v                            v                            v           |
+    |  Virtual Page Table                                                               |
+    |  Logical ID 0 -> Physical Block 102                                               |
+    |  Logical ID 1 -> Physical Block 45 (Shared CoW System Prompt)                     |
+    |  Logical ID 2 -> Physical Block 819                                               |
+    |             |                            |                            |           |
+    |             v                            v                            v           |
+    |  Physical VRAM Pool (Non-Contiguous Blocks in HBM3e / GDDR7)                      |
+    |  [Phys Block 45] (Ref Count: 64) <--- Shared Prefix (AVX2 Hashed)                 |
+    |  [Phys Block 102] (Ref Count: 1)                                                  |
+    |  [Phys Block 819] (Ref Count: 1)                                                  |
+    +-----------------------------------------------------------------------------------+
 
 ### Multi-Architecture Empirical Kernel Benchmarks
 
@@ -81,7 +79,7 @@ To isolate the exact architectural bottlenecks of LLM serving on **NVIDIA H200 N
 
 2. **Concurrency Pareto Frontier (`B08` — `c=1` to `c=256`):**
    - **Interactive Sweet Spot (`c=16` to `c=64`):** Scales from `3,423.20 tok/s` (`TTFT P50 = 29.21 ms`) up to **`8,418.35 tok/s`** while keeping **`TTFT P50 = 42.87 ms`** and `TPOT P50 = 7.15 ms`.
-   - **Max Batch Saturation (`c=256`, `max-num-seqs=256` in `B12`):** Reaches **`11,449.47 tok/s`** output throughput at the expense of queueing latency (`TTFT P50 = 1,013.83 ms`). Increasing `max-num-seqs` to `512` slightly regressed throughput (`4,507.43 → 4,497.20 tok/s`).
+   - **Max Batch Saturation (`c=256`, `max-num-seqs=256` in `B12`):** Reaches **`11,449.47 tok/s`** output throughput at the expense of queueing latency (`TTFT P50 = 1,013.83 ms`). Increasing `max-num-seqs` to `512` slightly regressed throughput (`4,507.43 -> 4,497.20 tok/s`).
 
 3. **Prefix Caching & Chunked Prefill (`B09` & `B10`):**
    - **Prefix Caching (`B09`):** Shared prefixes reduced mean request latency by **7.1x** (`206.58–234.56 ms` vs. `1,664.39 ms` for unique prefixes).
@@ -93,6 +91,18 @@ To isolate the exact architectural bottlenecks of LLM serving on **NVIDIA H200 N
 ![H200 Concurrency Pareto Curve](assets/h200_concurrency_pareto.png)
 ![H200 FP8 Precision Ablation](assets/h200_fp8_precision_ablation.png)
 ![H200 Prefix Caching and Chunked Prefill](assets/h200_prefix_and_chunked_prefill.png)
+
+### Paired Runtime Comparison (`B16`: SGLang `0.5.23` vs. vLLM `0.25.1` on H200 NVL)
+
+The full `B07–B14` suite (47 identical load points, identical input token totals per pair, `Qwen/Qwen2.5-7B-Instruct` snapshot and tokenizer, driven by `vllm bench serve --backend vllm`) was repeated on **SGLang `0.5.23` (`cu130`, FlashAttention 3, radix cache enabled)** and paired against **vLLM `0.25.1`** (`resultados/work-results-sglang-v3/` vs. `resultados/work-results-vllm/`, reported 2026-11-23 from 2026-11-22 runs):
+
+- **Overall Throughput Split:** SGLang achieved higher output throughput in **18 of 47 points**, with most deltas within **-15% to +10%**, **0 failed HTTP requests** across all 47 points, and no single universal winner across all regimes.
+- **Short Context & Concurrency (`B07` / `B08`):** **vLLM** leads output throughput across `c2–c256` (`-4.9%` to `-14.1%` for SGLang; `c1` nearly tied at `-0.4%`) and delivers lower median TTFT in short-context concurrency (`~35 ms` vs. `~181 ms` at `c32`). In SGLang `B07`, `FP8/FP8` beat `BF16/BF16` by `+16.6%` (`c32`) and `+9.7%` (`c128`), and `FP8/BF16` gained `+23.8%` at `c32` — confirming weight quantization drives gains rather than KV FP8.
+- **Prefix Caching & Chunked Prefill (`B09` / `B10`):** In `B09` (64 requests, concurrency 32), mean latencies were `422.49 ms` (identical prefix), `280.29 ms` (8 prefix groups), and `1,697.84 ms` (unique prefixes) on SGLang vs. `236.71 ms`, `208.86 ms`, and `1,682.70 ms` on vLLM (all 192 requests returned HTTP 200). In `B10` (`c32`), SGLang throughput plateaued around `1,307–1,413 tok/s` from `16,384` tokens upward due to default `max_prefill_tokens=16384`, with lower TPOT (`13.6–14.1 ms` vs. `17.7–20.6 ms`) but higher TTFT on smaller chunks.
+- **Long Context & KV Cache (`B11`):** SGLang's strongest regime, gaining **+4.0% to +10.5%** output throughput with lower median TTFT at 8,192 and 16,384 tokens (`1,034.89 tok/s` / `2,991.12 ms` at 8k KV FP8; `264.81 tok/s` / `28,509.06 ms` at 16k KV FP8), allocating `4,479,198` KV tokens with KV FP8 vs. `2,239,599` with KV BF16.
+- **Sequence Cap, Quality & Stability (`B12–B14`):** In `B12` (`c256`, caps `32–512`), both engines stayed within `±3.2%` with no gain above `256`. In `B13` (`temp=0`, 5 prompts), neither SGLang (`0/5` exact match, mean similarity `0.1275`) nor vLLM (`0/5`, `0.0958`) showed FP8 quality parity without calibrated attention scales. In `B14` (20,000 prompts, `c128`, `8 req/s`, `1,800s` timeout exit code `124`), SGLang completed `12,520` requests (`12,469` on vLLM) with servers remaining responsive until shutdown.
+
+> **Configuration & Operational Caveat:** SGLang ran with `--cuda-graph-backend-prefill=disabled` (required to start at `32,768` context without prefill CUDA graph capture OOM) while vLLM ran with CUDA graphs active; server startups took `30–45 s` (cached weights) and config switches required `SIGKILL` after a `60 s` `SIGTERM` grace window with VRAM release verified between phases. Isolating scheduler vs. graph behavior with `--cuda-graph-max-bs-prefill` is left as a follow-up check.
 
 ---
 
@@ -174,43 +184,44 @@ $$O_{\text{final}} = \frac{O_{M-1}}{d_{M-1}}$$
 
 ## 5. Directory Structure
 
-```text
-paged-kv-cache-engine/
-├── CMakeLists.txt
-├── README.md
-├── LICENSE
-├── assets/
-│   ├── vram_fragmentation_comparison.png
-│   ├── paged_attention_latency_cdf.png
-│   ├── cow_prefix_memory_savings.png
-│   ├── kernel_throughput_scaling.png
-│   ├── h200_concurrency_pareto.png
-│   ├── h200_fp8_precision_ablation.png
-│   └── h200_prefix_and_chunked_prefill.png
-├── benchmarks/
-│   └── h200_study/
-│       ├── docs/
-│       │   ├── ANALISE.md
-│       │   ├── grafico-estudo-h200.html
-│       │   └── resultado-para-envio.txt
-│       └── scripts/
-│           ├── b07-b14-bench.yaml
-│           ├── b07-b14-faseA-download.yaml
-│           └── run-b07-b14.sh
-├── include/
-│   ├── block_allocator.hpp
-│   ├── lru_prefix_cache.hpp
-│   ├── avx2_prefix_hasher.hpp
-│   ├── paged_attention.cuh
-│   └── kv_cache_types.hpp
-├── src/
-│   ├── paged_attention.cu
-│   ├── continuous_scheduler.cpp
-│   └── paged_kv_test.cpp
-└── scripts/
-    ├── generate_plots.py
-    └── generate_h200_study_plots.py
-```
+    paged-kv-cache-engine/
+    ├── CMakeLists.txt
+    ├── README.md
+    ├── LICENSE
+    ├── assets/
+    │   ├── vram_fragmentation_comparison.png
+    │   ├── paged_attention_latency_cdf.png
+    │   ├── cow_prefix_memory_savings.png
+    │   ├── kernel_throughput_scaling.png
+    │   ├── h200_concurrency_pareto.png
+    │   ├── h200_fp8_precision_ablation.png
+    │   └── h200_prefix_and_chunked_prefill.png
+    ├── benchmarks/
+    │   └── h200_study/
+    │       ├── docs/
+    │       │   ├── ANALISE.md
+    │       │   ├── grafico-estudo-h200.html
+    │       │   └── resultado-para-envio.txt
+    │       └── scripts/
+    │           ├── b07-b14-bench.yaml
+    │           ├── b07-b14-faseA-download.yaml
+    │           └── run-b07-b14.sh
+    ├── resultados/
+    │   ├── work-results-sglang-v3/
+    │   └── work-results-vllm/
+    ├── include/
+    │   ├── block_allocator.hpp
+    │   ├── lru_prefix_cache.hpp
+    │   ├── avx2_prefix_hasher.hpp
+    │   ├── paged_attention.cuh
+    │   └── kv_cache_types.hpp
+    ├── src/
+    │   ├── paged_attention.cu
+    │   ├── continuous_scheduler.cpp
+    │   └── paged_kv_test.cpp
+    └── scripts/
+        ├── generate_plots.py
+        └── generate_h200_study_plots.py
 
 ---
 
@@ -232,34 +243,30 @@ paged-kv-cache-engine/
 - Python 3 + `matplotlib`, `numpy` (for plot generation)
 
 ### Build Instructions
-```bash
-git clone https://github.com/JohnScheuer/paged-kv-cache-engine.git
-cd paged-kv-cache-engine
-mkdir build && cd build
+    git clone https://github.com/JohnScheuer/paged-kv-cache-engine.git
+    cd paged-kv-cache-engine
+    mkdir build && cd build
 
-# Target native GPU architecture (e.g., 90 for Hopper H200, 120 for Blackwell RTX 5060)
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=90
-make -j$(nproc)
-```
+    # Target native GPU architecture (e.g., 90 for Hopper H200, 120 for Blackwell RTX 5060)
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=90
+    make -j$(nproc)
 
 ### Running Tests & Benchmarks
-```bash
-# Run unit tests (Physical allocation, CoW, Correctness vs Ref CPU Softmax)
-./paged_kv_test
+    # Run unit tests (Physical allocation, CoW, Correctness vs Ref CPU Softmax)
+    ./paged_kv_test
 
-# Run benchmark & generate CSV telemetry
-./paged_kv_benchmark
+    # Run benchmark & generate CSV telemetry
+    ./paged_kv_benchmark
 
-# Regenerate kernel and H200 characterization assets
-python3 ../scripts/generate_plots.py
-python3 ../scripts/generate_h200_study_plots.py
-```
+    # Regenerate kernel and H200 characterization assets
+    python3 ../scripts/generate_plots.py
+    python3 ../scripts/generate_h200_study_plots.py
 
 ---
 
 ## 8. Acknowledgments & License
 
-- **Hardware Validation Acknowledgments**: Datacenter Hopper (`SM 90`) kernel and end-to-end `vLLM` FP8 characterization telemetry (`B07–B14`) validated on an enterprise **NVIDIA H200 NVL** cluster in collaboration with [**Vinicius Rosa**](https://github.com/rosavini).
+- **Hardware Validation Acknowledgments**: Datacenter Hopper (`SM 90`) kernel, `vLLM` FP8 characterization telemetry (`B07–B14`), and paired `B16` `SGLang` vs. `vLLM` benchmark runs validated on an enterprise **NVIDIA H200 NVL** cluster in collaboration with [**Vinicius Rosa**](https://github.com/rosavini)[cite: 2].
 - **License**: Released under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
